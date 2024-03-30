@@ -1,0 +1,4 @@
+name: ADUpgrade
+version: '${project.version}'
+main: me.alexdev.adupgrade.ADUpgrade
+api-version: '1.20'

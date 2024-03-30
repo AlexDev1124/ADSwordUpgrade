@@ -1,0 +1,4 @@
+name: ADUpgrade
+version: '1.0'
+main: me.alexdev.adupgrade.ADUpgrade
+api-version: '1.20'
