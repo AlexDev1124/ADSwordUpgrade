@@ -1,5 +1,6 @@
 package me.alexdev.adupgrade;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -18,17 +19,18 @@ import java.util.UUID;
 public class ADUpgrade extends JavaPlugin implements Listener {
 
     private static final int MAX_LEVEL = 5;
+    private static final int KILLS_REQUIRED = 30;
     private HashMap<UUID, Integer> kills = new HashMap<>();
 
     @Override
     public void onEnable() {
-        getLogger().info("§aPlugin ativado!");
+        getLogger().info("Plugin ativado!");
         getServer().getPluginManager().registerEvents(this, this);
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("§cPlugin desativado!");
+        getLogger().info("Plugin desativado!");
     }
 
     @EventHandler
@@ -45,7 +47,7 @@ public class ADUpgrade extends JavaPlugin implements Listener {
 
             // Verificar se o jogador tem uma espada na mão
             ItemStack itemInHand = player.getItemInHand();
-            if (itemInHand != null && itemInHand.getType() == Material.DIAMOND_SWORD) {
+            if (itemInHand != null && isSword(itemInHand.getType())) {
                 // Verificar se o jogador já matou mobs suficientes para fazer um upgrade
                 int currentKills = kills.getOrDefault(playerId, 0) + 1;
                 kills.put(playerId, currentKills);
@@ -53,12 +55,16 @@ public class ADUpgrade extends JavaPlugin implements Listener {
                 // Exibir barra de progresso na Lore da espada
                 showProgressBar(player, itemInHand, currentKills);
 
-                if (currentKills >= 30) {
+                if (currentKills >= KILLS_REQUIRED) {
                     upgradeSword(player, itemInHand);
                     kills.put(playerId, 0); // Resetar o contador de kills
                 }
             }
         }
+    }
+
+    private boolean isSword(Material material) {
+        return material == Material.WOOD_SWORD || material == Material.STONE_SWORD || material == Material.IRON_SWORD || material == Material.GOLD_SWORD || material == Material.DIAMOND_SWORD;
     }
 
     private void upgradeSword(Player player, ItemStack sword) {
@@ -69,7 +75,7 @@ public class ADUpgrade extends JavaPlugin implements Listener {
             int nextLevel = currentLevel + 1;
 
             if (nextLevel > MAX_LEVEL) { // MAX_LEVEL é uma constante que você pode definir
-                player.sendMessage("§cSua espada já está no nível máximo!");
+                player.sendMessage(ChatColor.RED + "Sua espada já está no nível máximo!");
                 return;
             }
 
@@ -86,7 +92,9 @@ public class ADUpgrade extends JavaPlugin implements Listener {
             sword.setItemMeta(meta);
 
             // Notificar o jogador sobre o upgrade
-            player.sendMessage("§bSua espada foi aprimorada para o nível " + nextLevel + "!");
+            player.sendMessage(ChatColor.AQUA + "Sua espada foi aprimorada para o nível " + nextLevel + "!");
+            player.playSound(player.getLocation(), "LEVEL_UP", 1.0f, 1.0f);
+            player.getWorld().playEffect(player.getLocation(), org.bukkit.Effect.MOBSPAWNER_FLAMES, 0);
         }
     }
 
@@ -94,17 +102,17 @@ public class ADUpgrade extends JavaPlugin implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             int currentLevel = item.getEnchantmentLevel(Enchantment.DAMAGE_ALL);
-            if (currentLevel >= 5) { // Se já tiver atingido o primeiro nível de upgrade, não exibir a barra de progresso
+            if (currentLevel >= MAX_LEVEL) { // Se já tiver atingido o primeiro nível de upgrade, não exibir a barra de progresso
                 meta.setLore(null);
                 item.setItemMeta(meta);
                 return; // Sair da função
             }
 
-            double progress = ((double) currentKills / 30) * 100;
+            double progress = ((double) currentKills / KILLS_REQUIRED) * 100;
             String progressBar = getProgressBar(progress);
 
             if (progress < 100) {
-                meta.setLore(Collections.singletonList("§6Progresso de Upgrade: " + progressBar));
+                meta.setLore(Collections.singletonList(ChatColor.GOLD + "Progresso de Upgrade: " + progressBar));
                 item.setItemMeta(meta);
             } else {
                 // Remover a barra de progresso da Lore quando o upgrade estiver completo
@@ -115,18 +123,18 @@ public class ADUpgrade extends JavaPlugin implements Listener {
     }
 
     private String getProgressBar(double progress) {
-        StringBuilder progressBar = new StringBuilder("§e[");
+        StringBuilder progressBar = new StringBuilder(ChatColor.YELLOW + "[");
         int progressBars = (int) (progress / 10);
 
         for (int i = 0; i < 10; i++) {
             if (i < progressBars) {
-                progressBar.append("§a█");
+                progressBar.append(ChatColor.GREEN + "█");
             } else {
-                progressBar.append("§7-");
+                progressBar.append(ChatColor.GRAY + "-");
             }
         }
 
-        progressBar.append("§e] ").append((int) progress).append("§e%");
+        progressBar.append(ChatColor.YELLOW + "] ").append((int) progress).append("%");
         return progressBar.toString();
     }
 }
