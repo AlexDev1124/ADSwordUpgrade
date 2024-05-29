@@ -18,14 +18,27 @@ import java.util.UUID;
 
 public class ADUpgrade extends JavaPlugin implements Listener {
 
-    private static final int MAX_LEVEL = 5;
-    private static final int KILLS_REQUIRED = 30;
+    private int maxLevel;
+    private int killsRequired;
+    private String progressBarTemplate;
+    private int barLength;
+    private String bars;
+    private String emptyBars;
     private HashMap<UUID, Integer> kills = new HashMap<>();
 
     @Override
     public void onEnable() {
+        saveDefaultConfig(); // Esta linha cria o config.yml se não existir
         getLogger().info("Plugin ativado!");
         getServer().getPluginManager().registerEvents(this, this);
+
+        // Carregar as configurações
+        maxLevel = getConfig().getInt("max-level");
+        killsRequired = getConfig().getInt("kills-required");
+        progressBarTemplate = getConfig().getString("progress-bar-template");
+        barLength = getConfig().getInt("bar-length");
+        bars = getConfig().getString("bars");
+        emptyBars = getConfig().getString("empty-bars");
     }
 
     @Override
@@ -55,7 +68,7 @@ public class ADUpgrade extends JavaPlugin implements Listener {
                 // Exibir barra de progresso na Lore da espada
                 showProgressBar(player, itemInHand, currentKills);
 
-                if (currentKills >= KILLS_REQUIRED) {
+                if (currentKills >= killsRequired) {
                     upgradeSword(player, itemInHand);
                     kills.put(playerId, 0); // Resetar o contador de kills
                 }
@@ -74,7 +87,7 @@ public class ADUpgrade extends JavaPlugin implements Listener {
             int currentLevel = sword.getEnchantmentLevel(Enchantment.DAMAGE_ALL);
             int nextLevel = currentLevel + 1;
 
-            if (nextLevel > MAX_LEVEL) { // MAX_LEVEL é uma constante que você pode definir
+            if (nextLevel > maxLevel) {
                 player.sendMessage(ChatColor.RED + "Sua espada já está no nível máximo!");
                 return;
             }
@@ -82,7 +95,7 @@ public class ADUpgrade extends JavaPlugin implements Listener {
             sword.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, nextLevel);
 
             // Aumentar a afiação da espada
-            int sharpnessLevel = nextLevel; // Afiação é igual ao nível da espada
+            int sharpnessLevel = nextLevel;
             meta.addEnchant(Enchantment.DAMAGE_ALL, sharpnessLevel, true);
             meta.addEnchant(Enchantment.DURABILITY, 3, true);
 
@@ -102,20 +115,19 @@ public class ADUpgrade extends JavaPlugin implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             int currentLevel = item.getEnchantmentLevel(Enchantment.DAMAGE_ALL);
-            if (currentLevel >= MAX_LEVEL) { // Se já tiver atingido o primeiro nível de upgrade, não exibir a barra de progresso
+            if (currentLevel >= maxLevel) {
                 meta.setLore(null);
                 item.setItemMeta(meta);
-                return; // Sair da função
+                return;
             }
 
-            double progress = ((double) currentKills / KILLS_REQUIRED) * 100;
+            double progress = ((double) currentKills / killsRequired) * 100;
             String progressBar = getProgressBar(progress);
 
             if (progress < 100) {
                 meta.setLore(Collections.singletonList(ChatColor.GOLD + "Progresso de Upgrade: " + progressBar));
                 item.setItemMeta(meta);
             } else {
-                // Remover a barra de progresso da Lore quando o upgrade estiver completo
                 meta.setLore(null);
                 item.setItemMeta(meta);
             }
@@ -123,18 +135,14 @@ public class ADUpgrade extends JavaPlugin implements Listener {
     }
 
     private String getProgressBar(double progress) {
-        StringBuilder progressBar = new StringBuilder(ChatColor.YELLOW + "[");
-        int progressBars = (int) (progress / 10);
+        int progressBars = (int) (progress / (100.0 / barLength));
+        int emptyBarsCount = barLength - progressBars;
 
-        for (int i = 0; i < 10; i++) {
-            if (i < progressBars) {
-                progressBar.append(ChatColor.GREEN + "█");
-            } else {
-                progressBar.append(ChatColor.GRAY + "-");
-            }
-        }
+        String progressBar = progressBarTemplate
+                .replace("%bars%", String.join("", Collections.nCopies(progressBars, bars)))
+                .replace("%empty-bars%", String.join("", Collections.nCopies(emptyBarsCount, emptyBars)))
+                .replace("%progress%", String.valueOf((int) progress));
 
-        progressBar.append(ChatColor.YELLOW + "] ").append((int) progress).append("%");
-        return progressBar.toString();
+        return ChatColor.translateAlternateColorCodes('&', progressBar);
     }
 }
