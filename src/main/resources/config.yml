@@ -1,0 +1,6 @@
+max-level: 5
+kills-required: 30
+progress-bar-template: "&e[&a%bars%%gray%%empty-bars%&e] &f%progress%%%"
+bars: "⬬"
+empty-bars: "-"
+bar-length: 10
